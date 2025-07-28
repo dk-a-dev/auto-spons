@@ -40,19 +40,10 @@ FRONTEND_URL=http://localhost:3000
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=dev.keshwani345@gmail.com
+SMTP_USER=
 SMTP_PASS=
 FROM_NAME=Auto-Spons
-FROM_EMAIL=dev.keshwani345@gmail.com
-```
-
-**Frontend Configuration** (`.env`):
-```bash
-# API Configuration
-REACT_APP_API_URL=http://localhost:5000
-REACT_APP_SMTP_USER=dev.keshwani345@gmail.com
-REACT_APP_FROM_EMAIL=dev.keshwani345@gmail.com
-REACT_APP_APP_NAME=Auto-Spons
+FROM_EMAIL=
 ```
 
 ### 3. Start the Application
@@ -83,26 +74,18 @@ npm start
 ### 4. Access the Application
 
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-- **API Documentation**: http://localhost:5000/api/docs
+- **Backend API**: http://localhost:3001
+- **API Documentation**: http://localhost:3001/api/docs
 
 ## How to Use
-
-### 1. Search for People and Companies
-
-1. Go to the **People Search** tab
-2. Enter search criteria (name, company, domain, etc.)
-3. Click "Search People" to find potential sponsors
-4. Review the results and add people to your outreach list
-
-### 2. Customize Email Templates
+### 1. Customize Email Templates
 
 1. Go to the **Email Templates** tab
 2. Edit the default template or create a new one
-3. Use variables like `[Company_Name]`, `[Event_Name]`, `[Person_Name]` for personalization
+3. Use variables like `{Company_Name}`, `{Event_Name}`, `{Person_Name}` for personalization
 4. Configure your event details (event name, date, etc.)
 
-### 3. Send Bulk Emails
+### 2. Send Bulk Emails
 
 1. Go to the **Bulk Email** tab
 2. Either:
@@ -110,7 +93,7 @@ npm start
 3. Preview the personalized emails
 4. Send the campaign
 
-### 4. Configuration
+### 3. Configuration
 
 1. Go to the **Configuration** tab
 2. Update your email settings if needed
@@ -190,30 +173,6 @@ auto-spons/
 └── start.sh              # Startup script
 ```
 
-### Adding New Features
-
-1. **Backend**: Add routes in `backend/routes/` and business logic in `backend/services/`
-2. **Frontend**: Add React components in `frontend/src/components/`
-3. **Environment**: Update `.env` files for new configuration options
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Docker Issues**
-   - Make sure Docker is running
-   - Try `docker-compose down` then `docker-compose up --build`
-
-2. **Email Not Sending**
-   - Check your Gmail App Password
-   - Verify SMTP settings in `.env`
-   - Test with the email test endpoint
-
-3. **Port Conflicts**
-   - Frontend runs on port 3000
-   - Backend runs on port 5000
-   - Make sure these ports are available
-
 ### Logs
 
 To view application logs:
@@ -246,33 +205,12 @@ docker-compose down
   docker-compose up --build
   ```
 
-### 4. Troubleshooting
-- If you see build errors, run `docker-compose build` and then `docker-compose up`.
-- Make sure ports 3000 (frontend) and 3001 (backend) are free.
-- For logs: `docker-compose logs backend` or `docker-compose logs frontend`
-
 ---
 
 ## Usage
 - Access the frontend at [http://localhost:3000](http://localhost:3000)
 - Configure SMTP, manage templates, upload CSVs, and send bulk emails via the UI.
 - Check logs and email status in the Email Logs tab.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
-
-## Support
-
-For questions or issues, please create an issue in the repository or contact the development team.
 
 ---
 
