@@ -1,5 +1,22 @@
+
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
+
+const USER_DB_PATH = path.join(__dirname, '../.userDb.json');
+async function getUserDb() {
+    try {
+        const data = await fsPromises.readFile(USER_DB_PATH, 'utf8');
+        return JSON.parse(data);
+    } catch (e) {
+        return {};
+    }
+}
+
+async function saveUserDb(db) {
+    await fsPromises.writeFile(USER_DB_PATH, JSON.stringify(db, null, 2));
+}
+
 
 const LOG_FILE = path.join(__dirname, '../data/emailLogs.json');
 const TEMPLATE_FILE = path.join(__dirname, '../data/emailTemplates.json');
@@ -51,5 +68,7 @@ module.exports = {
   addEmailLog,
   getEmailLogs,
   saveTemplate,
-  getTemplates
+  getTemplates,
+  getUserDb,
+  saveUserDb
 };

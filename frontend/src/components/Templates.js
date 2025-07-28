@@ -3,9 +3,9 @@ import { Box, Typography, TextField, Button, Paper, Alert, List, ListItem, ListI
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://backend.auto-spons.orb.local';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-export default function Templates() {
+export default function Templates({ jwt }) {
   const [templates, setTemplates] = useState([]);
   const [selected, setSelected] = useState(null);
   const [edit, setEdit] = useState({ id: '', subject: '', body: '' });
@@ -21,7 +21,9 @@ export default function Templates() {
 
   const fetchTemplates = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/email/templates`);
+      const res = await axios.get(`${API_BASE_URL}/api/email/templates`, {
+        headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
+      });
       setTemplates(res.data.templates || []);
     } catch {
       setTemplates([]);
@@ -30,7 +32,9 @@ export default function Templates() {
 
   const fetchGuide = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/email/template-guide`);
+      const res = await axios.get(`${API_BASE_URL}/api/email/template-guide`, {
+        headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
+      });
       setGuide(res.data.data);
     } catch {
       setGuide(null);
@@ -53,7 +57,9 @@ export default function Templates() {
     setLoading(true);
     setMessage(null);
     try {
-      await axios.post(`${API_BASE_URL}/api/email/save-template`, edit);
+      await axios.post(`${API_BASE_URL}/api/email/save-template`, edit, {
+        headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
+      });
       setMessage({ type: 'success', text: 'Template saved.' });
       fetchTemplates();
     } catch (err) {
@@ -91,7 +97,9 @@ export default function Templates() {
     setLoading(true);
     setMessage(null);
     try {
-      await axios.delete(`${API_BASE_URL}/api/email/delete-template/${selected}`);
+      await axios.delete(`${API_BASE_URL}/api/email/delete-template/${selected}`, {
+        headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
+      });
       setMessage({ type: 'success', text: 'Template deleted.' });
       fetchTemplates();
       handleNew();

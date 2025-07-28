@@ -1,12 +1,11 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, Alert, CircularProgress } from '@mui/material';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://backend.auto-spons.orb.local';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-export default function Configuration() {
-  const [smtp, setSmtp] = useState({
+export default function Configuration({ jwt, userConfig }) {
+  const [smtp, setSmtp] = useState(userConfig || {
     host: '',
     port: '',
     user: '',
@@ -20,6 +19,19 @@ export default function Configuration() {
   const [testResult, setTestResult] = useState(null);
   const [configStatus, setConfigStatus] = useState(null);
 
+  useEffect(() => {
+    if (jwt) fetchUserConfig();
+  }, [jwt]);
+
+  const fetchUserConfig = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/user/config`, {
+        headers: { Authorization: `Bearer ${jwt}` }
+      });
+      setSmtp(res.data.config || {});
+    } catch {}
+  };
+
   const handleChange = e => {
     const { name, value, type, checked } = e.target;
     setSmtp(prev => ({
@@ -32,9 +44,10 @@ export default function Configuration() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/email/save-config`, smtp);
-      setResult({ success: res.data.success, message: res.data.success ? 'Configuration saved.' : res.data.error });
-      await checkConfigStatus();
+      await axios.post(`${API_BASE_URL}/api/user/config`, { config: smtp }, {
+        headers: { Authorization: `Bearer ${jwt}` }
+      });
+      setResult({ success: true, message: 'Configuration saved.' });
     } catch (err) {
       setResult({ success: false, message: err.response?.data?.error || 'Failed to save config.' });
     }
@@ -43,7 +56,9 @@ export default function Configuration() {
 
   const checkConfigStatus = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/email/validate-config`);
+      const res = await axios.get(`${API_BASE_URL}/api/email/validate-config`, {
+        headers: { Authorization: `Bearer ${jwt}` }
+      });
       setConfigStatus(res.data.success ? 'Valid' : 'Invalid');
     } catch {
       setConfigStatus('Error');
@@ -58,7 +73,9 @@ export default function Configuration() {
     }
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/email/test`, { testEmail });
+      const res = await axios.post(`${API_BASE_URL}/api/email/test`, { testEmail }, {
+        headers: { Authorization: `Bearer ${jwt}` }
+      });
       setTestResult({ success: res.data.success, message: res.data.success ? 'Test email sent!' : res.data.error });
     } catch (err) {
       setTestResult({ success: false, message: err.response?.data?.error || 'Failed to send test email.' });
@@ -68,7 +85,7 @@ export default function Configuration() {
 
   return (
     <Box sx={{ maxWidth: 500, mx: 'auto', mt: 2 }}>
-      <Typography variant="h5" gutterBottom>SMTP Configuration</Typography>
+      <Typography variant="h5" gutterBottom>SMTP Configuration (Per User)</Typography>
       <TextField label="Host" name="host" value={smtp.host} onChange={handleChange} fullWidth margin="normal" />
       <TextField label="Port" name="port" value={smtp.port} onChange={handleChange} fullWidth margin="normal" type="number" />
       <TextField label="Username" name="user" value={smtp.user} onChange={handleChange} fullWidth margin="normal" />
@@ -80,7 +97,7 @@ export default function Configuration() {
           &nbsp;Use SSL/TLS (secure)
         </label>
       </Box>
-      <Button variant="contained" sx={{ mt: 2 }} onClick={handleSaveConfig} disabled={loading}>
+      <Button variant="contained" sx={{ mt: 2 }} onClick={handleSaveConfig} disabled={loading || !jwt}>
         {loading ? <CircularProgress size={24} /> : 'Save Configuration'}
       </Button>
       {result && (

@@ -1,3 +1,6 @@
+const jwt = require('jsonwebtoken');
+const { getUserDb } = require('../utils/localDb.js');
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 const express = require('express');
 const multer = require('multer');
 const csv = require('csv-parser');
@@ -7,6 +10,19 @@ const emailConfigDb = require('../utils/emailConfigDb.js');
 const localDb = require('../utils/localDb.js');
 const fsPromises = require('fs').promises;
 const router = express.Router();
+
+function requireAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth) return res.status(401).json({ error: 'No token.' });
+  try {
+    const { email } = jwt.verify(auth.replace('Bearer ', ''), JWT_SECRET);
+    req.userEmail = email;
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid token.' });
+  }
+}
+
 
 /**
  * @route POST /api/email/save-config
@@ -36,7 +52,7 @@ const emailService = new EmailService();
  * @route POST /api/email/send
  * @desc Send a single email
  */
-router.post('/send', async (req, res) => {
+router.post('/send', requireAuth, async (req, res) => {
   console.log('Route hit: POST /api/email/send');
   try {
     const emailData = req.body;
@@ -82,7 +98,7 @@ router.post('/send', async (req, res) => {
  * @route POST /api/email/send-bulk
  * @desc Send bulk emails with optional delay
  */
-router.post('/send-bulk', async (req, res) => {
+router.post('/send-bulk', requireAuth, async (req, res) => {
   console.log('Route hit: POST /api/email/send-bulk');
   try {
     const { emails, delayMs = 1000 } = req.body;
@@ -145,7 +161,7 @@ router.post('/send-bulk', async (req, res) => {
  * @route POST /api/email/send-personalized-bulk
  * @desc Send personalized bulk emails using template and contact data
  */
-router.post('/send-personalized-bulk', async (req, res) => {
+router.post('/send-personalized-bulk', requireAuth, async (req, res) => {
   console.log('Route hit: POST /api/email/send-personalized-bulk');
   try {
     const { 
@@ -259,7 +275,7 @@ router.post('/send-personalized-bulk', async (req, res) => {
  * @route POST /api/email/preview-personalized
  * @desc Preview personalized email without sending
  */
-router.post('/preview-personalized', async (req, res) => {
+router.post('/preview-personalized', requireAuth, async (req, res) => {
   console.log('Route hit: POST /api/email/preview-personalized');
   try {
     const { template, subject, contact, customData = {} } = req.body;
@@ -317,7 +333,7 @@ router.post('/preview-personalized', async (req, res) => {
  * @route GET /api/email/template-guide
  * @desc Get email template guide and examples
  */
-router.get('/template-guide', (req, res) => {
+router.get('/template-guide', requireAuth, (req, res) => {
   console.log('Route hit: GET /api/email/template-guide');
   const guide = emailService.getTemplateGuide();
   res.json({
@@ -330,7 +346,7 @@ router.get('/template-guide', (req, res) => {
  * @route POST /api/email/test
  * @desc Send a test email to verify configuration
  */
-router.post('/test', async (req, res) => {
+router.post('/test', requireAuth, async (req, res) => {
   console.log('Route hit: POST /api/email/test');
   try {
     const { testEmail } = req.body;
@@ -368,7 +384,7 @@ router.post('/test', async (req, res) => {
  * @route GET /api/email/validate-config
  * @desc Validate email service configuration
  */
-router.get('/validate-config', async (req, res) => {
+router.get('/validate-config', requireAuth, async (req, res) => {
   console.log('Route hit: GET /api/email/validate-config');
   try {
     const result = await emailService.validateConfiguration();
@@ -386,7 +402,7 @@ router.get('/validate-config', async (req, res) => {
  * @route POST /api/email/bulk-send
  * @desc Send bulk emails from CSV file upload
  */
-router.post('/bulk-send', upload.single('csvFile'), async (req, res) => {
+router.post('/bulk-send', requireAuth, upload.single('csvFile'), async (req, res) => {
   console.log('Route hit: POST /api/email/bulk-send');
   const { subject, template } = req.body;
 
@@ -475,13 +491,13 @@ router.post('/bulk-send', upload.single('csvFile'), async (req, res) => {
   }
 });
 
-router.get('/logs', (req, res) => {
+router.get('/logs', requireAuth, (req, res) => {
   console.log('Route hit: GET /api/email/logs');
   const logs = localDb.getEmailLogs();
   res.json({ success: true, logs });
 });
 
-router.get('/templates', (req, res) => {
+router.get('/templates', requireAuth, (req, res) => {
   console.log('Route hit: GET /api/email/templates');
   const templates = localDb.getTemplates();
   res.json({ success: true, templates });
@@ -491,7 +507,7 @@ router.get('/templates', (req, res) => {
  * @route POST /api/email/save-template
  * @desc Save an email template
  */
-router.post('/save-template', (req, res) => {
+router.post('/save-template', requireAuth, (req, res) => {
   console.log('Route hit: POST /api/email/save-template');
   const template = req.body;
   if (!template || !template.id || !template.subject || !template.body) {

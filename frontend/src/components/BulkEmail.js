@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Paper, TextField, Alert, MenuItem, CircularProgress } from '@mui/material';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://backend.auto-spons.orb.local';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-export default function BulkEmail() {
+export default function BulkEmail({ jwt }) {
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [subject, setSubject] = useState('');
@@ -20,7 +20,9 @@ export default function BulkEmail() {
 
   const fetchTemplates = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/email/templates`);
+      const res = await axios.get(`${API_BASE_URL}/api/email/templates`, {
+        headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
+      });
       setTemplates(res.data.templates || []);
     } catch {
       setTemplates([]);
@@ -60,7 +62,10 @@ export default function BulkEmail() {
     formData.append('subject', subject);
     try {
       const res = await axios.post(`${API_BASE_URL}/api/email/bulk-send`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: jwt ? `Bearer ${jwt}` : undefined
+        }
       });
       setResult({ success: res.data.success, message: res.data.message || 'Bulk email sent.', details: res.data });
     } catch (err) {

@@ -3,3 +3,7 @@ backend/.env
 backend/server-debug.js
 backend/node_modules
 frontend/node_modules
+backend/.userDb.json
+backend/data/emailConfig.json
+backend/data/emailLogs.json
+backend/data/emailTemplates.json

@@ -2,23 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from '@mui/material';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://backend.auto-spons.orb.local';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 const statusColor = {
   sent: 'success',
   failed: 'error',
 };
 
-export default function EmailLogs() {
+export default function EmailLogs({ jwt }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/email/logs`).then(res => {
+    axios.get(`${API_BASE_URL}/api/email/logs`, {
+      headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
+    }).then(res => {
       setLogs(res.data.logs || []);
       setLoading(false);
     });
-  }, []);
+  }, [jwt]);
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', mt: 2 }}>

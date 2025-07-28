@@ -34,6 +34,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Email routes
 app.use('/api/email', require('./routes/email'));
+// User auth routes
+app.use('/api/user', require('./routes/user'));
 
 // API Documentation endpoint
 app.get('/api/docs', (req, res) => {
