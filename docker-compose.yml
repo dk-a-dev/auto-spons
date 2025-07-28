@@ -16,6 +16,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: auto-spons-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
       
 volumes:
   uploads:

@@ -15,7 +15,7 @@ docker-compose up --build
 
 echo "✅ Auto-Spons is now running!"
 echo "🌐 Frontend: http://localhost:3000"
-echo "🔧 Backend API: http://localhost:5000"
-echo "📚 API Documentation: http://localhost:5000/api/docs"
+echo "🔧 Backend API: http://localhost:3001"
+echo "📚 API Documentation: http://localhost:3001/api/docs"
 echo ""
 echo "To stop the application, press Ctrl+C"

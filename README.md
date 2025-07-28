@@ -222,6 +222,42 @@ docker-compose logs backend
 docker-compose logs frontend
 ```
 
+## Docker Deployment (Self-Hosted)
+
+### 1. Build and Start All Services
+
+```bash
+docker-compose up --build
+```
+
+- The backend will be available at [http://localhost:3001](http://localhost:3001)
+- The frontend will be available at [http://localhost:3000](http://localhost:3000)
+
+### 2. Stopping Services
+
+```bash
+docker-compose down
+```
+
+### 3. Updating Environment Variables
+- Edit `backend/.env` for backend config (SMTP, etc.)
+- Rebuild containers if you change `.env`:
+  ```bash
+  docker-compose up --build
+  ```
+
+### 4. Troubleshooting
+- If you see build errors, run `docker-compose build` and then `docker-compose up`.
+- Make sure ports 3000 (frontend) and 3001 (backend) are free.
+- For logs: `docker-compose logs backend` or `docker-compose logs frontend`
+
+---
+
+## Usage
+- Access the frontend at [http://localhost:3000](http://localhost:3000)
+- Configure SMTP, manage templates, upload CSVs, and send bulk emails via the UI.
+- Check logs and email status in the Email Logs tab.
+
 ## Contributing
 
 1. Fork the repository
