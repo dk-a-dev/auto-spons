@@ -1,10 +1,9 @@
 # Auto-Spons 🚀
 
-An automated sponsorship outreach tool that helps teams find companies and send personalized emails automatically. Built with React frontend and Node.js backend, integrating Apollo API for finding prospects and Gmail SMTP for sending emails.
+An automated sponsorship outreach tool that helps teams find companies and send personalized emails automatically. Built with React frontend and Node.js backend, Gmail SMTP for sending emails.
 
 ## Features
 
-- 🔍 **Company & People Search** - Find potential sponsors using Apollo API
 - 📧 **Automated Email Campaigns** - Send personalized emails with customizable templates
 - 📁 **Bulk Operations** - Upload CSV/Excel files for bulk email campaigns
 - 🎯 **Smart Templates** - Dynamic email templates with variable substitution
@@ -16,7 +15,6 @@ An automated sponsorship outreach tool that helps teams find companies and send 
 ### Prerequisites
 
 - Docker and Docker Compose
-- Apollo API key (for people/company search)
 - Gmail account with App Password (for SMTP)
 
 ### 1. Clone the Repository
@@ -37,16 +35,13 @@ PORT=5000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:3000
 
-# Apollo API Configuration
-APOLLO_API_KEY=<key>
-APOLLO_BASE_URL=https://api.apollo.io/api/v1
 
 # Gmail SMTP Configuration
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=dev.keshwani345@gmail.com
-SMTP_PASS=qrpv tmqt vyxs zwpq
+SMTP_PASS=
 FROM_NAME=Auto-Spons
 FROM_EMAIL=dev.keshwani345@gmail.com
 ```
@@ -55,7 +50,6 @@ FROM_EMAIL=dev.keshwani345@gmail.com
 ```bash
 # API Configuration
 REACT_APP_API_URL=http://localhost:5000
-REACT_APP_APOLLO_API_KEY=absNfUQOBJVD2hYiSJ_amw
 REACT_APP_SMTP_USER=dev.keshwani345@gmail.com
 REACT_APP_FROM_EMAIL=dev.keshwani345@gmail.com
 REACT_APP_APP_NAME=Auto-Spons
@@ -113,7 +107,6 @@ npm start
 1. Go to the **Bulk Email** tab
 2. Either:
    - Upload a CSV/Excel file with contact information
-   - Use the contacts you found via Apollo search
 3. Preview the personalized emails
 4. Send the campaign
 
@@ -165,12 +158,6 @@ Manager, [Organization_Name]
 ```
 
 ## API Endpoints
-
-### Apollo API
-- `POST /api/apollo/search-people` - Search for people/prospects
-- `POST /api/apollo/enrich-person` - Get detailed person information
-- `POST /api/apollo/enrich-organization` - Get detailed company information
-
 ### Email API
 - `POST /api/email/send` - Send a single email
 - `POST /api/email/send-bulk` - Send bulk emails
@@ -222,12 +209,7 @@ auto-spons/
    - Verify SMTP settings in `.env`
    - Test with the email test endpoint
 
-3. **Apollo API Issues**
-   - Verify your Apollo API key is correct
-   - Check if you have sufficient credits
-   - The provided key only supports People Search endpoint
-
-4. **Port Conflicts**
+3. **Port Conflicts**
    - Frontend runs on port 3000
    - Backend runs on port 5000
    - Make sure these ports are available

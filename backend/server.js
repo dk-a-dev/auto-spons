@@ -32,10 +32,8 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Routes
-app.use('/api/apollo', require('./routes/apollo'));
+// Email routes
 app.use('/api/email', require('./routes/email'));
-app.use('/api/files', require('./routes/files'));
 
 // API Documentation endpoint
 app.get('/api/docs', (req, res) => {
@@ -43,16 +41,6 @@ app.get('/api/docs', (req, res) => {
     success: true,
     message: 'Auto-Spons API Documentation',
     endpoints: {
-      apollo: {
-        'POST /api/apollo/search-people': 'Search for people/prospects by criteria',
-        'POST /api/apollo/search-organizations': 'Search for organizations/companies by criteria',
-        'POST /api/apollo/enrich-person': 'Enrich a single person\'s data',
-        'POST /api/apollo/enrich-people-bulk': 'Enrich multiple people (up to 10)',
-        'POST /api/apollo/enrich-organization': 'Enrich a single organization',
-        'POST /api/apollo/enrich-organizations-bulk': 'Enrich multiple organizations (up to 10)',
-        'GET /api/apollo/usage': 'Get API usage statistics',
-        'GET /api/apollo/template-guide': 'Get template placeholders guide'
-      },
       email: {
         'POST /api/email/send': 'Send a single email',
         'POST /api/email/send-bulk': 'Send bulk emails',
@@ -62,13 +50,6 @@ app.get('/api/docs', (req, res) => {
         'GET /api/email/validate-config': 'Validate email configuration',
         'GET /api/email/template-guide': 'Get email template guide'
       },
-      files: {
-        'POST /api/files/upload': 'Upload and process CSV/Excel file',
-        'POST /api/files/preview': 'Preview file and get column suggestions',
-        'POST /api/files/process-and-enrich': 'Process file and enrich with Apollo',
-        'POST /api/files/export': 'Export data to CSV',
-        'GET /api/files/mapping-guide': 'Get column mapping guide'
-      }
     },
     version: '1.0.0'
   });

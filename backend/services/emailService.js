@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const emailConfigDb = require('../utils/emailConfigDb');
 
 class EmailService {
   constructor() {
@@ -9,25 +10,37 @@ class EmailService {
 
   setupTransporter() {
     try {
-      const emailConfig = {
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      };
-
-      if (!emailConfig.auth.user || !emailConfig.auth.pass) {
-        console.warn('SMTP credentials not found. Please configure SMTP_USER and SMTP_PASS in environment variables.');
+      let config = emailConfigDb.readConfig();
+      if (!config.host) {
+        config = {
+          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          },
+          from: process.env.SMTP_FROM || process.env.SMTP_USER
+        };
+      } else {
+        config = {
+          host: config.host,
+          port: parseInt(config.port),
+          secure: !!config.secure,
+          auth: {
+            user: config.user,
+            pass: config.pass
+          },
+          from: config.from
+        };
+      }
+      if (!config.auth.user || !config.auth.pass) {
+        console.warn('SMTP credentials not found. Please configure SMTP_USER and SMTP_PASS in environment variables or save config.');
         return;
       }
-
-      this.transporter = nodemailer.createTransport(emailConfig);
+      this.transporter = nodemailer.createTransport(config);
       this.isConfigured = true;
-
-      // Verify connection
+      this.config = config;
       this.transporter.verify((error, success) => {
         if (error) {
           console.error('SMTP connection error:', error);
@@ -36,11 +49,14 @@ class EmailService {
           console.log('SMTP server is ready to send emails');
         }
       });
-
     } catch (error) {
       console.error('Failed to setup email transporter:', error);
       this.isConfigured = false;
     }
+  }
+
+  reloadConfig() {
+    this.setupTransporter();
   }
 
   /**

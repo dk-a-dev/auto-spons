@@ -2,21 +2,42 @@ const express = require('express');
 const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
-const EmailService = require('../services/emailService');
-const ApolloService = require('../services/apolloService');
+const EmailService = require('../services/emailService.js');
+const emailConfigDb = require('../utils/emailConfigDb.js');
+const localDb = require('../utils/localDb.js');
+const fsPromises = require('fs').promises;
 const router = express.Router();
+
+/**
+ * @route POST /api/email/save-config
+ * @desc Save SMTP configuration from frontend
+ */
+router.post('/save-config', (req, res) => {
+  const config = req.body;
+  console.log('Route hit: POST /api/email/save-config');
+  if (!config.host || !config.port || !config.user || !config.pass || !config.from) {
+    return res.status(400).json({ success: false, error: 'Missing required SMTP config fields' });
+  }
+  try {
+    emailConfigDb.saveConfig(config);
+    emailService.reloadConfig();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to save config' });
+  }
+});
 
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
 
 const emailService = new EmailService();
-const apolloService = new ApolloService();
 
 /**
  * @route POST /api/email/send
  * @desc Send a single email
  */
 router.post('/send', async (req, res) => {
+  console.log('Route hit: POST /api/email/send');
   try {
     const emailData = req.body;
 
@@ -28,7 +49,14 @@ router.post('/send', async (req, res) => {
     }
 
     const result = await emailService.sendEmail(emailData);
-    
+    // Log email
+    localDb.addEmailLog({
+      type: 'single',
+      to: emailData.to,
+      subject: emailData.subject,
+      status: result.success ? 'sent' : 'failed',
+      error: result.success ? null : result.error || result.message
+    });
     if (result.success) {
       res.json({
         success: true,
@@ -55,6 +83,7 @@ router.post('/send', async (req, res) => {
  * @desc Send bulk emails with optional delay
  */
 router.post('/send-bulk', async (req, res) => {
+  console.log('Route hit: POST /api/email/send-bulk');
   try {
     const { emails, delayMs = 1000 } = req.body;
 
@@ -84,7 +113,16 @@ router.post('/send-bulk', async (req, res) => {
     }
 
     const result = await emailService.sendBulkEmails(emails, delayMs);
-    
+    // Log each email
+    result.results.forEach(r => {
+      localDb.addEmailLog({
+        type: 'bulk',
+        to: r.to,
+        subject: r.subject,
+        status: r.success ? 'sent' : 'failed',
+        error: r.success ? null : r.error
+      });
+    });
     res.json({
       success: true,
       message: 'Bulk email sending completed',
@@ -108,6 +146,7 @@ router.post('/send-bulk', async (req, res) => {
  * @desc Send personalized bulk emails using template and contact data
  */
 router.post('/send-personalized-bulk', async (req, res) => {
+  console.log('Route hit: POST /api/email/send-personalized-bulk');
   try {
     const { 
       template, 
@@ -137,7 +176,6 @@ router.post('/send-personalized-bulk', async (req, res) => {
     const personalizedEmails = contacts.map((contact, index) => {
       try {
         // Get company info if available
-        const companyData = contact.company || apolloService.extractCompanyInfo(contact) || {};
         
         // Generate personalized content
         const personalizedSubject = emailService.generatePersonalizedEmail(
@@ -181,7 +219,18 @@ router.post('/send-personalized-bulk', async (req, res) => {
 
     // Send bulk emails
     const result = await emailService.sendBulkEmails(personalizedEmails, delayMs);
-    
+    // Log each email
+    result.results.forEach((r, idx) => {
+      localDb.addEmailLog({
+        type: 'personalized',
+        to: r.to,
+        subject: r.subject,
+        status: r.success ? 'sent' : 'failed',
+        error: r.success ? null : r.error,
+        contactName: personalizedEmails[idx]?.contactData?.name,
+        contactCompany: personalizedEmails[idx]?.contactData?.company
+      });
+    });
     res.json({
       success: true,
       message: 'Personalized bulk email sending completed',
@@ -211,6 +260,7 @@ router.post('/send-personalized-bulk', async (req, res) => {
  * @desc Preview personalized email without sending
  */
 router.post('/preview-personalized', async (req, res) => {
+  console.log('Route hit: POST /api/email/preview-personalized');
   try {
     const { template, subject, contact, customData = {} } = req.body;
 
@@ -220,9 +270,6 @@ router.post('/preview-personalized', async (req, res) => {
         error: 'Template, subject, and contact are required'
       });
     }
-
-    // Get company info if available
-    const companyData = contact.company || apolloService.extractCompanyInfo(contact) || {};
     
     // Generate personalized content
     const personalizedSubject = emailService.generatePersonalizedEmail(
@@ -271,6 +318,7 @@ router.post('/preview-personalized', async (req, res) => {
  * @desc Get email template guide and examples
  */
 router.get('/template-guide', (req, res) => {
+  console.log('Route hit: GET /api/email/template-guide');
   const guide = emailService.getTemplateGuide();
   res.json({
     success: true,
@@ -283,6 +331,7 @@ router.get('/template-guide', (req, res) => {
  * @desc Send a test email to verify configuration
  */
 router.post('/test', async (req, res) => {
+  console.log('Route hit: POST /api/email/test');
   try {
     const { testEmail } = req.body;
 
@@ -320,6 +369,7 @@ router.post('/test', async (req, res) => {
  * @desc Validate email service configuration
  */
 router.get('/validate-config', async (req, res) => {
+  console.log('Route hit: GET /api/email/validate-config');
   try {
     const result = await emailService.validateConfiguration();
     res.json(result);
@@ -337,115 +387,118 @@ router.get('/validate-config', async (req, res) => {
  * @desc Send bulk emails from CSV file upload
  */
 router.post('/bulk-send', upload.single('csvFile'), async (req, res) => {
+  console.log('Route hit: POST /api/email/bulk-send');
+  const { subject, template } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: 'CSV file is required' });
+  }
+
+  if (!subject || !template) {
+    await fsPromises.unlink(req.file.path).catch(() => {});
+    return res.status(400).json({ success: false, error: 'Subject and template are required' });
+  }
+
+  const contacts = [];
+  const csvFilePath = req.file.path;
+
   try {
-    const { subject, template } = req.body;
-    
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'CSV file is required'
-      });
-    }
+    await new Promise((resolve, reject) => {
+      fs.createReadStream(csvFilePath)
+        .pipe(csv())
+        .on('data', (row) => {
+          const email = row.email || row.Email || row.email_address || row['Email Address'] || row.to;
+          const name = row.name || row.Name || row.first_name || row['First Name'] || 'Sir/Madam';
+          const company = row.company || row.Company || row.organization || row.Organization || '';
 
-    if (!subject || !template) {
-      return res.status(400).json({
-        success: false,
-        error: 'Subject and template are required'
-      });
-    }
-
-    // Parse CSV file
-    const contacts = [];
-    const csvFilePath = req.file.path;
-
-    fs.createReadStream(csvFilePath)
-      .pipe(csv())
-      .on('data', (row) => {
-        // Normalize email field names (email, Email, email_address, etc.)
-        const email = row.email || row.Email || row.email_address || row['Email Address'] || row.to;
-        const name = row.name || row.Name || row.first_name || row['First Name'] || 'Sir/Madam';
-        const company = row.company || row.Company || row.organization || row.Organization || '';
-        
-        if (email) {
-          contacts.push({
-            email: email.trim(),
-            name: name.trim(),
-            company: company.trim()
-          });
-        }
-      })
-      .on('end', async () => {
-        try {
-          // Clean up uploaded file
-          fs.unlinkSync(csvFilePath);
-
-          if (contacts.length === 0) {
-            return res.status(400).json({
-              success: false,
-              error: 'No valid email addresses found in CSV file'
+          if (email) {
+            contacts.push({
+              email: email.trim(),
+              name: name.trim(),
+              company: company.trim()
             });
           }
+        })
+        .on('end', resolve)
+        .on('error', reject);
+    });
 
-          // Generate personalized emails for each contact
-          const emails = contacts.map(contact => {
-            // Simple template personalization
-            let personalizedTemplate = template
-              .replace(/\{name\}/g, contact.name)
-              .replace(/\{company\}/g, contact.company)
-              .replace(/\{email\}/g, contact.email);
+    await fsPromises.unlink(csvFilePath).catch(() => {});
 
-            let personalizedSubject = subject
-              .replace(/\{name\}/g, contact.name)
-              .replace(/\{company\}/g, contact.company);
+    if (contacts.length === 0) {
+      return res.status(400).json({ success: false, error: 'No valid email addresses found in CSV file' });
+    }
 
-            return {
-              to: contact.email,
-              subject: personalizedSubject,
-              html: personalizedTemplate.replace(/\n/g, '<br>'),
-              text: personalizedTemplate
-            };
-          });
+    const emails = contacts.map(contact => {
+      const personalizedSubject = subject
+        .replace(/\{name\}/g, contact.name)
+        .replace(/\{company\}/g, contact.company);
 
-          // Send bulk emails
-          const result = await emailService.sendBulkEmails(emails, 2000); // 2 second delay between emails
+      const personalizedTemplate = template
+        .replace(/\{name\}/g, contact.name)
+        .replace(/\{company\}/g, contact.company)
+        .replace(/\{email\}/g, contact.email);
 
-          res.json({
-            success: true,
-            message: 'Bulk email sending completed',
-            totalContacts: contacts.length,
-            totalSent: result.successCount,
-            failureCount: result.failureCount,
-            results: result.results
-          });
+      return {
+        to: contact.email,
+        subject: personalizedSubject,
+        html: personalizedTemplate.replace(/\n/g, '<br>'),
+        text: personalizedTemplate
+      };
+    });
 
-        } catch (error) {
-          console.error('Bulk email processing error:', error);
-          res.status(500).json({
-            success: false,
-            error: 'Error processing bulk emails'
-          });
-        }
-      })
-      .on('error', (error) => {
-        console.error('CSV parsing error:', error);
-        // Clean up uploaded file
-        try {
-          fs.unlinkSync(csvFilePath);
-        } catch (e) {}
-        
-        res.status(400).json({
-          success: false,
-          error: 'Error parsing CSV file'
-        });
+    const result = await emailService.sendBulkEmails(emails, 2000); // Delay between emails
+
+    result.results.forEach(r => {
+      localDb.addEmailLog({
+        type: 'csv',
+        to: r.to,
+        subject: r.subject,
+        status: r.success ? 'sent' : 'failed',
+        error: r.success ? null : r.error
       });
+    });
+
+    res.json({
+      success: true,
+      message: 'Bulk email sending completed',
+      totalContacts: contacts.length,
+      totalSent: result.successCount,
+      failureCount: result.failureCount,
+      results: result.results
+    });
 
   } catch (error) {
-    console.error('Bulk email upload error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during bulk email upload'
-    });
+    console.error('Bulk email processing error:', error);
+    await fsPromises.unlink(csvFilePath).catch(() => {});
+    res.status(500).json({ success: false, error: 'Internal server error during bulk email processing' });
   }
+});
+
+router.get('/logs', (req, res) => {
+  console.log('Route hit: GET /api/email/logs');
+  const logs = localDb.getEmailLogs();
+  res.json({ success: true, logs });
+});
+
+router.get('/templates', (req, res) => {
+  console.log('Route hit: GET /api/email/templates');
+  const templates = localDb.getTemplates();
+  res.json({ success: true, templates });
+});
+
+/**
+ * @route POST /api/email/save-template
+ * @desc Save an email template
+ */
+router.post('/save-template', (req, res) => {
+  console.log('Route hit: POST /api/email/save-template');
+  const template = req.body;
+  if (!template || !template.id || !template.subject || !template.body) {
+    return res.status(400).json({ success: false, error: 'Template must have id, subject, and body' });
+  }
+  localDb.saveTemplate(template);
+  res.json({ success: true });
 });
 
 module.exports = router;
